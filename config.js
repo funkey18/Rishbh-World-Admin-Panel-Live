@@ -3,7 +3,7 @@
 window.APP_CONFIG = {
   // Use the same as environment.dev.ts by default
   serverUrl: 'https://rishbh-world-backend-1.onrender.com/',
-  imageUrl: 'https://RishabhWorld-api.avertastrategy.com/v1/file/image/',
-  pdfUrl: 'https://RishabhWorld-api.avertastrategy.com/v1/file/document/',
-  recaptchaSiteKey: '6Ldt_pwqAAAAABqo3PsiGWGkYaEdexQCjfBztjvv'
+  // imageUrl: 'https://RishabhWorld-api.avertastrategy.com/v1/file/image/',
+  // pdfUrl: 'https://RishabhWorld-api.avertastrategy.com/v1/file/document/',
+  // recaptchaSiteKey: '6Ldt_pwqAAAAABqo3PsiGWGkYaEdexQCjfBztjvv'
 };

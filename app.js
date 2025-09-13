@@ -36,7 +36,7 @@
         'Content-Type': 'application/json',
         'Authorization': getAuthHeader(),
       },
-      credentials: 'include',
+      credentials: 'omit',
     });
     if (!res.ok) throw new Error(`GET ${path} failed ${res.status}`);
     return res.json();
@@ -50,7 +50,7 @@
         'Authorization': getAuthHeader(),
       },
       body: JSON.stringify(data),
-      credentials: 'include',
+      credentials: 'omit',
     });
     if (!res.ok) throw new Error(`POST ${path} failed ${res.status}`);
     return res.json();
@@ -64,7 +64,7 @@
         'Authorization': getAuthHeader(),
       },
       body: JSON.stringify(data),
-      credentials: 'include',
+      credentials: 'omit',
     });
     if (!res.ok) throw new Error(`PUT ${path} failed ${res.status}`);
     return res.json().catch(() => ({ success: true }));
@@ -558,7 +558,7 @@
           'Authorization': getAuthHeader(),
         },
         body: formData,
-        credentials: 'include',
+        credentials: 'omit',
       });
       if (!res.ok) throw new Error(`Import failed ${res.status}`);
       const json = await res.json().catch(() => ({}));
