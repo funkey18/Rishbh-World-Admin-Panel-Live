@@ -1,0 +1,470 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Dashboard | RishabhWorld (Vanilla)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Customer Orders Management" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+
+  <link rel="shortcut icon" href="https://images.crunchbase.com/image/upload/c_pad,h_256,w_256,f_auto,q_auto:eco,dpr_1/cz9sg7wue8wmk3lzjl4t">
+
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+
+  <style>
+    /* Custom styles */
+    .container { max-width: 1200px; }
+    .modal-backdrop.show { opacity: .5; }
+    .table th { background-color: #f8f9fa; }
+    .card-header { background-color: #f8f9fa !important; }
+  </style>
+</head>
+<body class="bg-light">
+  <div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h2 class="text-primary">Customer Orders Management</h2>
+      <div class="d-flex align-items-center gap-2">
+        <div class="input-group" style="max-width: 320px;">
+          <input type="file" class="form-control" id="excelFile" accept=".xlsx,.xls">
+          <button class="btn btn-outline-primary" id="btnImportExcel" title="Import Excel (.xlsx, .xls)">
+            <i class="bi bi-upload"></i> Import
+          </button>
+        </div>
+        <button class="btn btn-primary" id="btnNewOrder">
+          <i class="bi bi-plus-circle"></i> New Order
+        </button>
+      </div>
+    </div>
+
+    <!-- Search and Filters -->
+    <div class="card mb-4 border-0 shadow-sm">
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <div class="input-group">
+              <span class="input-group-text bg-transparent"><i class="bi bi-search"></i></span>
+              <input type="text" class="form-control" placeholder="Search by customer name, mobile, or order number" id="searchQuery">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loading Indicator -->
+    <div id="loadingBox" class="text-center my-4" style="display:none;">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+      <p class="mt-2 text-muted">Loading customer data...</p>
+    </div>
+
+    <!-- No Results -->
+    <div id="noResults" class="alert alert-info text-center" style="display:none;">
+      <i class="bi bi-info-circle me-2"></i>No customers found. Try adjusting your search criteria.
+    </div>
+
+    <!-- Customers List -->
+    <div id="customersBox" class="mb-4" style="display:none;">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-light">
+          <h5 class="mb-0">Customer Orders</h5>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0" id="customersTable">
+            <thead class="table-light">
+              <tr>
+                <th>S.No</th>
+                <th>Customer</th>
+                <th>Mobile</th>
+                <th>Address</th>
+                <th>Total Orders</th>
+                <th class="text-end">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- rows injected by app.js -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Summary -->
+    <div id="summaryBox" class="alert alert-light border-0 shadow-sm" style="display:none;"></div>
+  </div>
+
+  <!-- View Orders Modal -->
+  <div class="modal fade" id="orderModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered" role="document">
+      <div class="modal-content">
+        <div class="modal-header bg-light">
+          <h5 class="modal-title">Order Details</h5>
+          <button type="button" class="btn-close" data-close-modal="orderModal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="card mb-4 border-0 shadow-sm">
+            <div class="card-body">
+              <h5 class="card-title text-primary">Customer Information</h5>
+              <div class="row">
+                <div class="col-md-4">
+                  <p class="mb-1"><strong>Name:</strong> <span id="v_name"></span></p>
+                  <p class="mb-1"><strong>Mobile:</strong> <span id="v_mobile"></span></p>
+                </div>
+                <div class="col-md-4">
+                  <p class="mb-1"><strong>Address:</strong> <span id="v_address"></span></p>
+                  <p class="mb-1" id="v_dob_box" style="display:none;">
+                    <strong>Date of Birth:</strong> <span id="v_dob"></span>
+                  </p>
+                </div>
+                <div class="col-md-4">
+                  <p class="mb-1"><strong>Total Orders:</strong> <span id="v_total_orders"></span></p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-bordered table-hover">
+              <thead class="table-light">
+                <tr>
+                  <th>Order #</th>
+                  <th>Bill No</th>
+                  <th>Date</th>
+                  <th>Items</th>
+                  <th>Advance</th>
+                  <th>Balance</th>
+                  <th>Trial Date</th>
+                  <th>Delivery Date</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="ordersTbody">
+                <!-- rows injected -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close-modal="orderModal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-backdrop fade show" id="orderBackdrop" style="display:none;"></div>
+
+  <!-- Edit Customer Modal -->
+  <div class="modal fade" id="customerEditModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-md modal-dialog-centered" role="document">
+      <div class="modal-content">
+        <div class="modal-header bg-light">
+          <h5 class="modal-title">Edit Customer</h5>
+          <button type="button" class="btn-close" data-close-modal="customerEditModal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="customerEditForm">
+            <input type="hidden" id="cust_id">
+            <div class="mb-3">
+              <label class="form-label">Name</label>
+              <input type="text" class="form-control" id="cust_name" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Mobile</label>
+              <input type="text" class="form-control" id="cust_mobile" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Address</label>
+              <input type="text" class="form-control" id="cust_address">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Date of Birth</label>
+              <input type="date" class="form-control" id="cust_dob">
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close-modal="customerEditModal">Cancel</button>
+          <button type="button" class="btn btn-primary" id="btnSaveCustomer">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-backdrop fade show" id="customerBackdrop" style="display:none;"></div>
+
+  <!-- Edit Order Modal -->
+  <div class="modal fade" id="orderEditModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+      <div class="modal-content">
+        <div class="modal-header bg-light">
+          <h5 class="modal-title">Edit Order</h5>
+          <button type="button" class="btn-close" data-close-modal="orderEditModal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="orderEditForm">
+            <input type="hidden" id="ord_id">
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label class="form-label">Date</label>
+                <input type="date" class="form-control" id="ord_date" required>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Order No</label>
+                <input type="text" class="form-control" id="ord_orderNo">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Bill No</label>
+                <input type="text" class="form-control" id="ord_billNo">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Tailoring</label>
+                <input type="text" class="form-control" id="ord_tailoring">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Total Amount</label>
+                <input type="text" class="form-control" id="ord_totalAmt">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Advance</label>
+                <input type="text" class="form-control" id="ord_advance">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Balance</label>
+                <input type="text" class="form-control" id="ord_balance">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Fabric</label>
+                <input type="text" class="form-control" id="ord_fabric">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Shirt</label>
+                <input type="text" class="form-control" id="ord_shirt" placeholder="e.g., 2">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Kurta</label>
+                <input type="text" class="form-control" id="ord_kurta" placeholder="e.g., 1">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Trouser</label>
+                <input type="text" class="form-control" id="ord_trouser" placeholder="e.g., 1">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Suit</label>
+                <input type="text" class="form-control" id="ord_suit" placeholder="e.g., 0">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Bandi</label>
+                <input type="text" class="form-control" id="ord_bandi" placeholder="e.g., 0">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Jodhpuri</label>
+                <input type="text" class="form-control" id="ord_jodhpuri" placeholder="e.g., 0">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Sherwani</label>
+                <input type="text" class="form-control" id="ord_sherwani" placeholder="e.g., 0">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Other</label>
+                <input type="text" class="form-control" id="ord_other" placeholder="e.g., Add buttons">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Trial Date</label>
+                <input type="date" class="form-control" id="ord_trialDate">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Delivery Date</label>
+                <input type="date" class="form-control" id="ord_deliveryDate">
+              </div>
+              <div class="col-12">
+                <label class="form-label">Remark</label>
+                <textarea class="form-control" rows="2" id="ord_remark"></textarea>
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close-modal="orderEditModal">Cancel</button>
+          <button type="button" class="btn btn-primary" id="btnSaveOrder">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-backdrop fade show" id="orderEditBackdrop" style="display:none;"></div>
+
+  <!-- New Order Modal -->
+  <div class="modal fade" id="newOrderModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered" role="document">
+      <div class="modal-content">
+        <div class="modal-header bg-light">
+          <h5 class="modal-title">Create New Order</h5>
+          <button type="button" class="btn-close" data-close-modal="newOrderModal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="newOrderForm">
+            <div class="row g-3 mb-4">
+              <div class="col-md-6">
+                <label class="form-label">Customer Name</label>
+                <input type="text" class="form-control" id="n_name" required>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Mobile</label>
+                <input type="tel" class="form-control" id="n_mobile" required>
+              </div>
+              <div class="col-12">
+                <label class="form-label">Address</label>
+                <input type="text" class="form-control" id="n_address">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Date of Birth</label>
+                <input type="date" class="form-control" id="n_dob">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Order Date</label>
+                <input type="date" class="form-control" id="n_date" required>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Order Number</label>
+                <input type="text" class="form-control" id="n_orderNo" required>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Bill Number</label>
+                <input type="text" class="form-control" id="n_billNo" required>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Tailoring</label>
+                <select class="form-select" id="n_tailoring">
+                  <option value="Yes">Yes</option>
+                  <option value="No">No</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Fabric</label>
+                <input type="text" class="form-control" id="n_fabric">
+              </div>
+
+              <!-- Garment Types -->
+              <div class="col-12">
+                <label class="form-label">Garment Types</label>
+                <div class="row g-2">
+                  <div class="col-md-3">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" id="n_shirt">
+                      <label class="form-check-label" for="n_shirt">Shirt</label>
+                    </div>
+                  </div>
+                  <div class="col-md-3">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" id="n_kurta">
+                      <label class="form-check-label" for="n_kurta">Kurta</label>
+                    </div>
+                  </div>
+                  <div class="col-md-3">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" id="n_trouser">
+                      <label class="form-check-label" for="n_trouser">Trouser</label>
+                    </div>
+                  </div>
+                  <div class="col-md-3">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" id="n_suit">
+                      <label class="form-check-label" for="n_suit">Suit</label>
+                    </div>
+                  </div>
+                  <div class="col-md-3">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" id="n_bandi">
+                      <label class="form-check-label" for="n_bandi">Bandi</label>
+                    </div>
+                  </div>
+                  <div class="col-md-3">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" id="n_jodhpuri">
+                      <label class="form-check-label" for="n_jodhpuri">Jodhpuri</label>
+                    </div>
+                  </div>
+                  <div class="col-md-3">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" id="n_sherwani">
+                      <label class="form-check-label" for="n_sherwani">Sherwani</label>
+                    </div>
+                  </div>
+                  <div class="col-md-3">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" id="n_other">
+                      <label class="form-check-label" for="n_other">Other</label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Dates -->
+              <div class="col-md-4">
+                <label class="form-label">Trial Date</label>
+                <input type="date" class="form-control" id="n_trialDate">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Delivery Date</label>
+                <input type="date" class="form-control" id="n_deliveryDate">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Rating</label>
+                <select class="form-select" id="n_rating">
+                  <option value="1">1 Star</option>
+                  <option value="2">2 Stars</option>
+                  <option value="3">3 Stars</option>
+                  <option value="4">4 Stars</option>
+                  <option value="5" selected>5 Stars</option>
+                </select>
+              </div>
+
+              <!-- Payment -->
+              <div class="col-md-4">
+                <label class="form-label">Total Amount (₹)</label>
+                <input type="number" class="form-control" id="n_totalAmt" step="0.01" required>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Advance (₹)</label>
+                <input type="number" class="form-control" id="n_advance" step="0.01" required>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Balance (₹)</label>
+                <input type="number" class="form-control" id="n_balance" step="0.01" readonly>
+              </div>
+
+              <!-- Additional Info -->
+              <div class="col-12">
+                <label class="form-label">Remarks</label>
+                <textarea class="form-control" rows="2" id="n_remark"></textarea>
+              </div>
+              <div class="col-12">
+                <label class="form-label">Reason (if any)</label>
+                <input type="text" class="form-control" id="n_reason">
+              </div>
+              <div class="col-12">
+                <label class="form-label">Report (if any)</label>
+                <input type="text" class="form-control" id="n_report">
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close-modal="newOrderModal">Cancel</button>
+          <button type="button" class="btn btn-primary" id="btnCreateOrder">
+            <span>Create Order</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-backdrop fade show" id="newOrderBackdrop" style="display:none;"></div>
+
+  <!-- Bootstrap JS Bundle with Popper -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  
+  <!-- Config and App Scripts -->
+  <script src="./config.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>
