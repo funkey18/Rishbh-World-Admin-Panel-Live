@@ -78,6 +78,9 @@
   const elCustomersBox = document.getElementById('customersBox');
   const elCustomersTableBody = document.querySelector('#customersTable tbody');
   const elSummary = document.getElementById('summaryBox');
+  // Pagination elements
+  const elPagination = document.getElementById('paginationControls');
+  const elPageSize = document.getElementById('pageSize');
   // Excel import elements
   const elExcelFile = document.getElementById('excelFile');
   const elBtnImportExcel = document.getElementById('btnImportExcel');
@@ -162,6 +165,10 @@
   // Customers state
   let customers = [];
   let selectedCustomer = null;
+  let currentPage = 0; // 0-based
+  let pageSize = 10;
+  let totalPages = 0;
+  let totalElements = 0;
 
   // Utilities
   function show(el) { el && (el.style.display = 'block'); }
@@ -193,7 +200,7 @@
     customers.forEach((c, idx) => {
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td class="text-center">${idx + 1}</td>
+        <td class="text-center">${(currentPage * pageSize) + idx + 1}</td>
         <td>
           <div class="fw-bold">${c.name || ''}</div>
           <small class="text-muted">ID: ${c.id}</small>
@@ -231,7 +238,54 @@
   }
 
   function renderSummary() {
-    elSummary.textContent = `Showing ${customers.length} customers with their orders. Use the search above to refine results.`;
+    const start = totalElements ? (currentPage * pageSize + 1) : 0;
+    const end = Math.min((currentPage + 1) * pageSize, totalElements);
+    elSummary.textContent = `Showing ${start}-${end} of ${totalElements} customers. Use the search above to refine results.`;
+  }
+
+  function buildPageItem(label, page, disabled = false, active = false, aria = '') {
+    const li = document.createElement('li');
+    li.className = `page-item${disabled ? ' disabled' : ''}${active ? ' active' : ''}`;
+    const a = document.createElement('a');
+    a.className = 'page-link';
+    a.href = '#';
+    if (aria) a.setAttribute('aria-label', aria);
+    a.textContent = label;
+    a.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (disabled || active) return;
+      currentPage = page;
+      loadCustomers();
+    });
+    li.appendChild(a);
+    return li;
+  }
+
+  function renderPagination() {
+    if (!elPagination) return;
+    elPagination.innerHTML = '';
+
+    // First / Prev
+    elPagination.appendChild(buildPageItem('«', 0, currentPage === 0, false, 'First'));
+    elPagination.appendChild(buildPageItem('‹', Math.max(0, currentPage - 1), currentPage === 0, false, 'Previous'));
+
+    // Numbered window around current page (convert to 1-based for display)
+    const windowSize = 5;
+    const start = Math.max(0, currentPage - Math.floor(windowSize / 2));
+    const end = Math.min(totalPages - 1, start + windowSize - 1);
+    const realStart = Math.max(0, Math.min(start, Math.max(0, totalPages - windowSize)));
+    for (let p = realStart; p <= end; p++) {
+      elPagination.appendChild(buildPageItem(String(p + 1), p, false, p === currentPage));
+    }
+
+    // Next / Last
+    elPagination.appendChild(buildPageItem('›', Math.min(totalPages - 1, currentPage + 1), currentPage >= totalPages - 1, false, 'Next'));
+    elPagination.appendChild(buildPageItem('»', Math.max(0, totalPages - 1), currentPage >= totalPages - 1, false, 'Last'));
+
+    // Sync page size select visual
+    if (elPageSize) {
+      elPageSize.value = String(pageSize);
+    }
   }
 
   // Modal helpers
@@ -497,11 +551,16 @@
     hide(elSummary);
 
     const q = (elSearch.value || '').trim();
-    const qs = q ? `?q=${encodeURIComponent(q)}` : '';
+    const params = new URLSearchParams();
+    params.set('page', String(currentPage));
+    params.set('size', String(pageSize));
+    if (q) params.set('q', q);
 
     try {
-      const res = await apiGet(`api/customers/with-orders${qs}`);
+      const res = await apiGet(`api/customers/with-orders?${params.toString()}`);
       customers = Array.isArray(res.result) ? res.result : [];
+      totalPages = Number(res.totalPages || 0);
+      totalElements = Number(res.totalElements || customers.length || 0);
       hide(elLoading);
       if (!customers.length) {
         show(elNoResults);
@@ -509,6 +568,7 @@
       }
       renderCustomers();
       renderSummary();
+      renderPagination();
       show(elCustomersBox);
       show(elSummary);
     } catch (e) {
@@ -582,11 +642,23 @@
 
   elSearch.addEventListener('input', () => {
     if (searchDebounce) clearTimeout(searchDebounce);
-    searchDebounce = setTimeout(loadCustomers, 300);
+    searchDebounce = setTimeout(() => { currentPage = 0; loadCustomers(); }, 300);
   });
   elSearch.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') loadCustomers();
+    if (e.key === 'Enter') { currentPage = 0; loadCustomers(); }
   });
+
+  // Page size handler
+  if (elPageSize) {
+    elPageSize.addEventListener('change', () => {
+      const val = parseInt(elPageSize.value, 10);
+      if (!Number.isNaN(val) && val > 0) {
+        pageSize = val;
+        currentPage = 0;
+        loadCustomers();
+      }
+    });
+  }
 
   // Initial values and first load
   // If you need to set a temporary session for testing, uncomment:
@@ -596,5 +668,7 @@
   if (n_orderNo) n_orderNo.value = ids.orderNo;
   if (n_billNo) n_billNo.value = ids.billNo;
 
+  // Initialize page size select value
+  if (elPageSize) elPageSize.value = String(pageSize);
   loadCustomers();
 })();
