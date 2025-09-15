@@ -37,6 +37,9 @@
         <button class="btn btn-primary" id="btnNewOrder">
           <i class="bi bi-plus-circle"></i> New Order
         </button>
+        <button class="btn btn-outline-secondary" id="btnLogout" title="Logout">
+          <i class="bi bi-box-arrow-right"></i> Logout
+        </button>
       </div>
     </div>
 
@@ -358,52 +361,36 @@
                 <label class="form-label">Garment Types</label>
                 <div class="row g-2">
                   <div class="col-md-3">
-                    <div class="form-check">
-                      <input class="form-check-input" type="checkbox" id="n_shirt">
-                      <label class="form-check-label" for="n_shirt">Shirt</label>
-                    </div>
+                    <label class="form-label" for="n_shirt">Shirt</label>
+                    <input class="form-control" type="text" id="n_shirt" placeholder="e.g., 2">
                   </div>
                   <div class="col-md-3">
-                    <div class="form-check">
-                      <input class="form-check-input" type="checkbox" id="n_kurta">
-                      <label class="form-check-label" for="n_kurta">Kurta</label>
-                    </div>
+                    <label class="form-label" for="n_kurta">Kurta</label>
+                    <input class="form-control" type="text" id="n_kurta" placeholder="e.g., 1">
                   </div>
                   <div class="col-md-3">
-                    <div class="form-check">
-                      <input class="form-check-input" type="checkbox" id="n_trouser">
-                      <label class="form-check-label" for="n_trouser">Trouser</label>
-                    </div>
+                    <label class="form-label" for="n_trouser">Trouser</label>
+                    <input class="form-control" type="text" id="n_trouser" placeholder="e.g., 1">
                   </div>
                   <div class="col-md-3">
-                    <div class="form-check">
-                      <input class="form-check-input" type="checkbox" id="n_suit">
-                      <label class="form-check-label" for="n_suit">Suit</label>
-                    </div>
+                    <label class="form-label" for="n_suit">Suit</label>
+                    <input class="form-control" type="text" id="n_suit" placeholder="e.g., 0">
                   </div>
                   <div class="col-md-3">
-                    <div class="form-check">
-                      <input class="form-check-input" type="checkbox" id="n_bandi">
-                      <label class="form-check-label" for="n_bandi">Bandi</label>
-                    </div>
+                    <label class="form-label" for="n_bandi">Bandi</label>
+                    <input class="form-control" type="text" id="n_bandi" placeholder="e.g., 0">
                   </div>
                   <div class="col-md-3">
-                    <div class="form-check">
-                      <input class="form-check-input" type="checkbox" id="n_jodhpuri">
-                      <label class="form-check-label" for="n_jodhpuri">Jodhpuri</label>
-                    </div>
+                    <label class="form-label" for="n_jodhpuri">Jodhpuri</label>
+                    <input class="form-control" type="text" id="n_jodhpuri" placeholder="e.g., 0">
                   </div>
                   <div class="col-md-3">
-                    <div class="form-check">
-                      <input class="form-check-input" type="checkbox" id="n_sherwani">
-                      <label class="form-check-label" for="n_sherwani">Sherwani</label>
-                    </div>
+                    <label class="form-label" for="n_sherwani">Sherwani</label>
+                    <input class="form-control" type="text" id="n_sherwani" placeholder="e.g., 0">
                   </div>
                   <div class="col-md-3">
-                    <div class="form-check">
-                      <input class="form-check-input" type="checkbox" id="n_other">
-                      <label class="form-check-label" for="n_other">Other</label>
-                    </div>
+                    <label class="form-label" for="n_other">Other</label>
+                    <input class="form-control" type="text" id="n_other" placeholder="e.g., Add buttons">
                   </div>
                 </div>
               </div>
@@ -468,6 +455,26 @@
     </div>
   </div>
   <div class="modal-backdrop fade show" id="newOrderBackdrop" style="display:none;"></div>
+
+  <!-- Confirm Modal -->
+  <div class="modal fade" id="confirmModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+      <div class="modal-content">
+        <div class="modal-header bg-light">
+          <h5 class="modal-title" id="confirmTitle">Confirm</h5>
+          <button type="button" class="btn-close" data-close-modal="confirmModal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p id="confirmMessage" class="mb-0">Are you sure?</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close-modal="confirmModal" id="btnCancelConfirm">Cancel</button>
+          <button type="button" class="btn btn-danger" id="btnConfirmAction">Delete</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-backdrop fade show" id="confirmBackdrop" style="display:none;"></div>
 
   <!-- Bootstrap JS Bundle with Popper -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>

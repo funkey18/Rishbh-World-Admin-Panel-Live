@@ -29,6 +29,18 @@
     return token ? `Bearer ${token}` : '';
     }
 
+  // Auth guard: if not logged in, redirect to login page (only for dashboard pages)
+  try {
+    if (!getSession()) {
+      // Avoid running rest of the dashboard script when unauthenticated
+      window.location.replace('login.html');
+      return; // stop executing the IIFE
+    }
+  } catch (_) {
+    // If sessionStorage not available, still attempt to go to login
+    try { window.location.replace('login.html'); return; } catch (_) {}
+  }
+
   // Simple fetch wrappers
   async function apiGet(path) {
     const res = await fetch(BASE_URL + path, {
@@ -70,6 +82,19 @@
     return res.json().catch(() => ({ success: true }));
   }
 
+  async function apiDelete(path) {
+    const res = await fetch(BASE_URL + path, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': getAuthHeader(),
+      },
+      credentials: 'omit',
+    });
+    if (!res.ok) throw new Error(`DELETE ${path} failed ${res.status}`);
+    return res.json().catch(() => ({ success: true }));
+  }
+
   // Elements
   const elSearch = document.getElementById('searchQuery');
   const elBtnNewOrder = document.getElementById('btnNewOrder');
@@ -78,6 +103,7 @@
   const elCustomersBox = document.getElementById('customersBox');
   const elCustomersTableBody = document.querySelector('#customersTable tbody');
   const elSummary = document.getElementById('summaryBox');
+  const elBtnLogout = document.getElementById('btnLogout');
   // Pagination elements
   const elPagination = document.getElementById('paginationControls');
   const elPageSize = document.getElementById('pageSize');
@@ -162,6 +188,13 @@
   const n_report = document.getElementById('n_report');
   const btnCreateOrder = document.getElementById('btnCreateOrder');
 
+  // Confirm modal elements
+  const confirmModal = document.getElementById('confirmModal');
+  const confirmBackdrop = document.getElementById('confirmBackdrop');
+  const confirmTitle = document.getElementById('confirmTitle');
+  const confirmMessage = document.getElementById('confirmMessage');
+  const btnConfirmAction = document.getElementById('btnConfirmAction');
+
   // Customers state
   let customers = [];
   let selectedCustomer = null;
@@ -214,7 +247,8 @@
         <td><span class="badge bg-primary rounded-pill">${(c.orders || []).length} orders</span></td>
         <td class="text-end">
           <button class="btn btn-sm btn-outline-primary me-1" data-action="view" data-id="${c.id}"><i class="bi bi-eye"></i> View</button>
-          <button class="btn btn-sm btn-outline-secondary" data-action="edit" data-id="${c.id}"><i class="bi bi-pencil"></i> Edit</button>
+          <button class="btn btn-sm btn-outline-secondary me-1" data-action="edit" data-id="${c.id}"><i class="bi bi-pencil"></i> Edit</button>
+          <button class="btn btn-sm btn-outline-danger" data-action="delete" data-id="${c.id}"><i class="bi bi-trash"></i> Delete</button>
         </td>
       `;
       elCustomersTableBody.appendChild(tr);
@@ -233,6 +267,15 @@
         const id = Number(btn.getAttribute('data-id'));
         const cust = customers.find(x => x.id === id);
         if (cust) openCustomerEdit(cust);
+      });
+    });
+    elCustomersTableBody.querySelectorAll('button[data-action="delete"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = Number(btn.getAttribute('data-id'));
+        openConfirm('Delete this user and all associated data? This action cannot be undone.', async () => {
+          await apiDelete(`api/customers/${id}`);
+          await loadCustomers();
+        }, 'Delete User', 'Delete');
       });
     });
   }
@@ -310,6 +353,23 @@
     });
   });
 
+  // Confirm modal helper
+  let pendingConfirm = null;
+  function openConfirm(message, onConfirm, title = 'Confirm', confirmText = 'Delete') {
+    if (confirmTitle) confirmTitle.textContent = title;
+    if (confirmMessage) confirmMessage.textContent = message || 'Are you sure?';
+    if (btnConfirmAction) btnConfirmAction.textContent = confirmText;
+    pendingConfirm = async () => {
+      try { await onConfirm(); } catch (e) { console.error(e); }
+      closeModal(confirmModal, confirmBackdrop);
+    };
+    if (btnConfirmAction) {
+      // Remove previous listener by reassigning onclick
+      btnConfirmAction.onclick = () => { pendingConfirm && pendingConfirm(); };
+    }
+    openModal(confirmModal, confirmBackdrop);
+  }
+
   // View Orders
   function openOrderModal(cust) {
     selectedCustomer = cust;
@@ -350,6 +410,7 @@
         <td>
           <span class="badge ${statusCompleted ? 'bg-success' : 'bg-warning'}">${statusCompleted ? 'Completed' : 'In Progress'}</span>
           <button class="btn btn-sm btn-outline-secondary ms-2" data-action="edit-order" data-id="${order.id}"><i class="bi bi-pencil"></i> Edit</button>
+          <button class="btn btn-sm btn-outline-danger ms-1" data-action="delete-order" data-id="${order.id}"><i class="bi bi-trash"></i> Delete</button>
         </td>
       `;
       ordersTbody.appendChild(tr);
@@ -361,6 +422,21 @@
         const oid = Number(btn.getAttribute('data-id'));
         const ord = (cust.orders || []).find(o => o.id === oid);
         if (ord) openOrderEdit(ord);
+      });
+    });
+    // Wire delete order buttons
+    ordersTbody.querySelectorAll('button[data-action="delete-order"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const oid = Number(btn.getAttribute('data-id'));
+        openConfirm('Delete this order permanently? This action cannot be undone.', async () => {
+          await apiDelete(`api/customers/orders/${oid}`);
+          // refresh and re-open modal with updated data
+          await loadCustomers();
+          if (selectedCustomer) {
+            const ref = customers.find(c => c.id === selectedCustomer.id);
+            if (ref) openOrderModal(ref);
+          }
+        }, 'Delete Order', 'Delete');
       });
     });
 
@@ -473,14 +549,14 @@
     n_billNo.value = ids.billNo;
     n_tailoring.value = 'Yes';
     n_fabric.value = '';
-    n_shirt.checked = false;
-    n_kurta.checked = false;
-    n_trouser.checked = false;
-    n_suit.checked = false;
-    n_bandi.checked = false;
-    n_jodhpuri.checked = false;
-    n_sherwani.checked = false;
-    n_other.checked = false;
+    n_shirt.value = '';
+    n_kurta.value = '';
+    n_trouser.value = '';
+    n_suit.value = '';
+    n_bandi.value = '';
+    n_jodhpuri.value = '';
+    n_sherwani.value = '';
+    n_other.value = '';
     n_trialDate.value = '';
     n_deliveryDate.value = '';
     n_rating.value = '5';
@@ -516,14 +592,14 @@
       advance: n_advance.value,
       balance: n_balance.value,
       fabric: n_fabric.value,
-      shirt: n_shirt.checked ? 'Shirt' : '',
-      kurta: n_kurta.checked ? 'Kurta' : '',
-      trouser: n_trouser.checked ? 'Trouser' : '',
-      suit: n_suit.checked ? 'Suit' : '',
-      bandi: n_bandi.checked ? 'Bandi' : '',
-      jodhpuri: n_jodhpuri.checked ? 'Jodhpuri' : '',
-      sherwani: n_sherwani.checked ? 'Sherwani' : '',
-      other: n_other.checked ? 'Other' : '',
+      shirt: n_shirt.value || '',
+      kurta: n_kurta.value || '',
+      trouser: n_trouser.value || '',
+      suit: n_suit.value || '',
+      bandi: n_bandi.value || '',
+      jodhpuri: n_jodhpuri.value || '',
+      sherwani: n_sherwani.value || '',
+      other: n_other.value || '',
       trialDate: n_trialDate.value || null,
       deliveryDate: n_deliveryDate.value || null,
       remark: n_remark.value || null,
@@ -584,6 +660,14 @@
   btnCreateOrder.addEventListener('click', createOrder);
   btnSaveCustomer.addEventListener('click', saveCustomerEdit);
   btnSaveOrder.addEventListener('click', saveOrderEdit);
+
+  // Logout handler
+  if (elBtnLogout) {
+    elBtnLogout.addEventListener('click', () => {
+      try { sessionStorage.removeItem(SESSION_KEY); } catch (_) {}
+      window.location.replace('login.html');
+    });
+  }
 
   // Excel import handlers
   const IMPORT_FILE_EXTNS = ['xlsx', 'xls'];
