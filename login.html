@@ -28,15 +28,15 @@
           <div class="mb-3">
             <label for="email" class="form-label">Email</label>
             <input type="email" class="form-control" id="email" placeholder="name@example.com" required>
-            <!-- <div class="form-text">Use email: <code>ruvik@fmail.com</code></div> -->
+            
           </div>
           <div class="mb-3">
             <label for="password" class="form-label">Password</label>
             <input type="password" class="form-control" id="password" placeholder="••••••••" required>
-            <!-- <div class="form-text">Use password: <code>Golu@2001</code></div> -->
+            
           </div>
           <div class="d-grid gap-2">
-            <button type="submit" class="btn btn-primary">
+            <button type="submit" class="btn btn-primary" id="btnLogin">
               <i class="bi bi-box-arrow-in-right me-1"></i> Sign In
             </button>
           </div>
@@ -122,10 +122,28 @@
       const email = document.getElementById('email');
       const password = document.getElementById('password');
       const errorBox = document.getElementById('errorBox');
+      const btnLogin = document.getElementById('btnLogin');
+
+      const btnDefaultHtml = btnLogin ? btnLogin.innerHTML : '';
+      function setLoading(state) {
+        if (!btnLogin) return;
+        if (state) {
+          btnLogin.disabled = true;
+          email.disabled = true;
+          password.disabled = true;
+          btnLogin.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Signing in...';
+        } else {
+          btnLogin.disabled = false;
+          email.disabled = false;
+          password.disabled = false;
+          btnLogin.innerHTML = btnDefaultHtml;
+        }
+      }
 
       form.addEventListener('submit', function(e){
         e.preventDefault();
         errorBox.classList.add('d-none');
+        setLoading(true);
 
         const em = (email.value || '').trim();
         const pw = (password.value || '').trim();
@@ -141,6 +159,7 @@
         } else {
           errorBox.classList.remove('d-none');
           showToast('Invalid credentials. Please try again.', { title: 'Login Failed', variant: 'danger' });
+          setLoading(false);
         }
       });
     })();

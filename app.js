@@ -55,10 +55,10 @@
         credentials: 'omit',
       });
       if (!res.ok) throw new Error(`GET ${path} failed ${res.status}`);
-      notifySuccess(`GET ${path} • ${res.status}`);
       return res.json();
     } catch (e) {
-      notifyError(e && e.message ? e.message : `GET ${path} failed`);
+      // Suppress toasts for GET errors; log to console instead
+      console.error(e && e.message ? e.message : `GET ${path} failed`);
       throw e;
     }
   }
@@ -236,6 +236,24 @@
   function formatDateISO(d) { if (!d) return ''; const dt = new Date(d); return dt.toISOString().slice(0, 10); }
   function formatDateHuman(d) { if (!d) return 'N/A'; try { return new Date(d).toLocaleDateString(); } catch { return d; } }
 
+  // Button loading helper
+  function setButtonLoading(btn, isLoading, loadingText) {
+    if (!btn) return;
+    if (isLoading) {
+      if (!btn.dataset.defaultHtml) {
+        btn.dataset.defaultHtml = btn.innerHTML;
+      }
+      btn.disabled = true;
+      const text = loadingText || 'Processing...';
+      btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>${text}`;
+    } else {
+      btn.disabled = false;
+      if (btn.dataset.defaultHtml) {
+        btn.innerHTML = btn.dataset.defaultHtml;
+      }
+    }
+  }
+
   function generateOrderNumber() {
     const now = new Date();
     const year = String(now.getFullYear()).slice(-2);
@@ -392,7 +410,18 @@
     };
     if (btnConfirmAction) {
       // Remove previous listener by reassigning onclick
-      btnConfirmAction.onclick = () => { pendingConfirm && pendingConfirm(); };
+      btnConfirmAction.onclick = async () => {
+        if (!pendingConfirm) return;
+        // Determine appropriate loading text
+        const txt = (confirmText || '').toLowerCase().includes('delete') ? 'Deleting...' : 'Processing...';
+        try {
+          setButtonLoading(btnConfirmAction, true, txt);
+          await pendingConfirm();
+        } finally {
+          // Reset button state in case modal stays open for any reason
+          setButtonLoading(btnConfirmAction, false);
+        }
+      };
     }
     openModal(confirmModal, confirmBackdrop);
   }
@@ -490,12 +519,15 @@
       dob: (cust_dob.value || '').trim(),
     };
     try {
+      setButtonLoading(btnSaveCustomer, true, 'Saving...');
       await apiPut(`api/customers/${id}`, payload);
       closeModal(customerEditModal, customerBackdrop);
       await loadCustomers();
     } catch (e) {
       console.error('Failed to update customer', e);
       try { window.showToast && window.showToast('Failed to update customer', { title: 'Update Failed', variant: 'danger' }); } catch(_){}
+    } finally {
+      setButtonLoading(btnSaveCustomer, false);
     }
   }
 
@@ -549,6 +581,7 @@
       remark: (ord_remark.value || '').trim(),
     };
     try {
+      setButtonLoading(btnSaveOrder, true, 'Saving...');
       await apiPut(`api/customers/orders/${id}`, payload);
       closeModal(orderEditModal, orderEditBackdrop);
       // If order modal is open, refresh selected customer list by reloading customers
@@ -560,6 +593,8 @@
     } catch (e) {
       console.error('Failed to update order', e);
       try { window.showToast && window.showToast('Failed to update order', { title: 'Update Failed', variant: 'danger' }); } catch(_){}
+    } finally {
+      setButtonLoading(btnSaveOrder, false);
     }
   }
 
@@ -635,6 +670,7 @@
       report: n_report.value || null,
     };
     try {
+      setButtonLoading(btnCreateOrder, true, 'Creating...');
       await apiPost('api/customers/orders', payload);
       try { window.showToast && window.showToast('Order created successfully!', { title: 'Created', variant: 'success' }); } catch(_){}
       closeModal(newOrderModal, newOrderBackdrop);
@@ -642,6 +678,8 @@
     } catch (e) {
       console.error('Error creating order', e);
       try { window.showToast && window.showToast('Error creating order. Please try again.', { title: 'Create Failed', variant: 'danger' }); } catch(_){}
+    } finally {
+      setButtonLoading(btnCreateOrder, false);
     }
   }
 
@@ -723,6 +761,7 @@
     formData.append('data', emptyJson);
 
     try {
+      setButtonLoading(elBtnImportExcel, true, 'Importing...');
       const res = await fetch(BASE_URL + 'api/import/upload', {
         method: 'POST',
         headers: {
@@ -744,6 +783,8 @@
     } catch (e) {
       console.error('Error importing file:', e);
       try { window.showToast && window.showToast('Failed to import file. Please try again.', { title: 'Import Failed', variant: 'danger' }); } catch(_){}
+    } finally {
+      setButtonLoading(elBtnImportExcel, false);
     }
   }
 
