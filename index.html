@@ -476,8 +476,51 @@
   </div>
   <div class="modal-backdrop fade show" id="confirmBackdrop" style="display:none;"></div>
 
+  <!-- Toast Container -->
+  <div id="toastContainer" class="toast-container position-fixed top-0 end-0 p-3" style="z-index:1080;"></div>
+
   <!-- Bootstrap JS Bundle with Popper -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- Global Toast Helper -->
+  <script>
+    (function(){
+      const containerId = 'toastContainer';
+      function ensureContainer(){
+        let c = document.getElementById(containerId);
+        if (!c) {
+          c = document.createElement('div');
+          c.id = containerId;
+          c.className = 'toast-container position-fixed top-0 end-0 p-3';
+          c.style.zIndex = '1080';
+          document.body.appendChild(c);
+        }
+        return c;
+      }
+      window.showToast = function(message, opts){
+        try {
+          const options = Object.assign({ title: '', variant: 'primary', delay: 3000 }, opts || {});
+          const container = ensureContainer();
+          const toastEl = document.createElement('div');
+          toastEl.className = `toast align-items-center text-bg-${options.variant} border-0`;
+          toastEl.setAttribute('role', 'alert');
+          toastEl.setAttribute('aria-live', 'assertive');
+          toastEl.setAttribute('aria-atomic', 'true');
+          toastEl.innerHTML = `
+            <div class="d-flex">
+              <div class="toast-body">
+                ${options.title ? `<strong class='me-2'>${options.title}</strong>` : ''}${message || ''}
+              </div>
+              <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>`;
+          container.appendChild(toastEl);
+          const t = new bootstrap.Toast(toastEl, { delay: options.delay, autohide: true });
+          toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
+          t.show();
+        } catch (_) { /* noop */ }
+      };
+    })();
+  </script>
   
   <!-- Config and App Scripts -->
   <script src="./config.js"></script>

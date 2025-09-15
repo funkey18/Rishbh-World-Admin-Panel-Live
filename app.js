@@ -42,57 +42,84 @@
   }
 
   // Simple fetch wrappers
+  function notifySuccess(msg){ try { window.showToast && window.showToast(msg, { title: 'Success', variant: 'success' }); } catch(_){} }
+  function notifyError(msg){ try { window.showToast && window.showToast(msg, { title: 'Error', variant: 'danger', delay: 5000 }); } catch(_){} }
+
   async function apiGet(path) {
-    const res = await fetch(BASE_URL + path, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': getAuthHeader(),
-      },
-      credentials: 'omit',
-    });
-    if (!res.ok) throw new Error(`GET ${path} failed ${res.status}`);
-    return res.json();
+    try {
+      const res = await fetch(BASE_URL + path, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': getAuthHeader(),
+        },
+        credentials: 'omit',
+      });
+      if (!res.ok) throw new Error(`GET ${path} failed ${res.status}`);
+      notifySuccess(`GET ${path} • ${res.status}`);
+      return res.json();
+    } catch (e) {
+      notifyError(e && e.message ? e.message : `GET ${path} failed`);
+      throw e;
+    }
   }
 
   async function apiPost(path, data) {
-    const res = await fetch(BASE_URL + path, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': getAuthHeader(),
-      },
-      body: JSON.stringify(data),
-      credentials: 'omit',
-    });
-    if (!res.ok) throw new Error(`POST ${path} failed ${res.status}`);
-    return res.json();
+    try {
+      const res = await fetch(BASE_URL + path, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': getAuthHeader(),
+        },
+        body: JSON.stringify(data),
+        credentials: 'omit',
+      });
+      if (!res.ok) throw new Error(`POST ${path} failed ${res.status}`);
+      notifySuccess(`POST ${path} • ${res.status}`);
+      return res.json();
+    } catch (e) {
+      notifyError(e && e.message ? e.message : `POST ${path} failed`);
+      throw e;
+    }
   }
 
   async function apiPut(path, data) {
-    const res = await fetch(BASE_URL + path, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': getAuthHeader(),
-      },
-      body: JSON.stringify(data),
-      credentials: 'omit',
-    });
-    if (!res.ok) throw new Error(`PUT ${path} failed ${res.status}`);
-    return res.json().catch(() => ({ success: true }));
+    try {
+      const res = await fetch(BASE_URL + path, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': getAuthHeader(),
+        },
+        body: JSON.stringify(data),
+        credentials: 'omit',
+      });
+      if (!res.ok) throw new Error(`PUT ${path} failed ${res.status}`);
+      notifySuccess(`PUT ${path} • ${res.status}`);
+      return res.json().catch(() => ({ success: true }));
+    } catch (e) {
+      notifyError(e && e.message ? e.message : `PUT ${path} failed`);
+      throw e;
+    }
   }
 
   async function apiDelete(path) {
-    const res = await fetch(BASE_URL + path, {
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': getAuthHeader(),
-      },
-      credentials: 'omit',
-    });
-    if (!res.ok) throw new Error(`DELETE ${path} failed ${res.status}`);
-    return res.json().catch(() => ({ success: true }));
+    try {
+      const res = await fetch(BASE_URL + path, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': getAuthHeader(),
+        },
+        credentials: 'omit',
+      });
+      if (!res.ok) throw new Error(`DELETE ${path} failed ${res.status}`);
+      notifySuccess(`DELETE ${path} • ${res.status}`);
+      return res.json().catch(() => ({ success: true }));
+    } catch (e) {
+      notifyError(e && e.message ? e.message : `DELETE ${path} failed`);
+      throw e;
+    }
   }
 
   // Elements
@@ -468,7 +495,7 @@
       await loadCustomers();
     } catch (e) {
       console.error('Failed to update customer', e);
-      alert('Failed to update customer');
+      try { window.showToast && window.showToast('Failed to update customer', { title: 'Update Failed', variant: 'danger' }); } catch(_){}
     }
   }
 
@@ -532,7 +559,7 @@
       }
     } catch (e) {
       console.error('Failed to update order', e);
-      alert('Failed to update order');
+      try { window.showToast && window.showToast('Failed to update order', { title: 'Update Failed', variant: 'danger' }); } catch(_){}
     }
   }
 
@@ -576,7 +603,7 @@
   async function createOrder() {
     // basic validation
     if (!n_name.value || !n_mobile.value || !n_orderNo.value || !n_billNo.value) {
-      alert('Please fill in all required fields');
+      try { window.showToast && window.showToast('Please fill in all required fields', { title: 'Validation', variant: 'warning' }); } catch(_){}
       return;
     }
     const payload = {
@@ -609,12 +636,12 @@
     };
     try {
       await apiPost('api/customers/orders', payload);
-      alert('Order created successfully!');
+      try { window.showToast && window.showToast('Order created successfully!', { title: 'Created', variant: 'success' }); } catch(_){}
       closeModal(newOrderModal, newOrderBackdrop);
       await loadCustomers();
     } catch (e) {
       console.error('Error creating order', e);
-      alert('Error creating order. Please try again.');
+      try { window.showToast && window.showToast('Error creating order. Please try again.', { title: 'Create Failed', variant: 'danger' }); } catch(_){}
     }
   }
 
@@ -676,16 +703,16 @@
   async function importExcel() {
     const file = elExcelFile && elExcelFile.files && elExcelFile.files[0];
     if (!file) {
-      alert('Please select an Excel file (.xlsx or .xls) to upload.');
+      try { window.showToast && window.showToast('Please select an Excel file (.xlsx or .xls) to upload.', { title: 'No File Selected', variant: 'warning' }); } catch(_){}
       return;
     }
     const ext = (file.name.split('.').pop() || '').toLowerCase();
     if (!IMPORT_FILE_EXTNS.includes(ext)) {
-      alert('Invalid file type. Please upload .xlsx or .xls files only.');
+      try { window.showToast && window.showToast('Invalid file type. Please upload .xlsx or .xls files only.', { title: 'Invalid File', variant: 'warning' }); } catch(_){}
       return;
     }
     if (file.size > MAX_FILE_SIZE) {
-      alert('File size should not exceed 5MB.');
+      try { window.showToast && window.showToast('File size should not exceed 5MB.', { title: 'File Too Large', variant: 'warning' }); } catch(_){}
       return;
     }
 
@@ -707,16 +734,16 @@
       if (!res.ok) throw new Error(`Import failed ${res.status}`);
       const json = await res.json().catch(() => ({}));
       if (json && json.status === '200' && json.message === 'excel.imported') {
-        alert('Excel file has been imported successfully!');
+        try { window.showToast && window.showToast('Excel file has been imported successfully!', { title: 'Import Success', variant: 'success' }); } catch(_){}
       } else {
-        alert('File imported successfully!');
+        try { window.showToast && window.showToast('File imported successfully!', { title: 'Import Success', variant: 'success' }); } catch(_){}
       }
       if (elExcelFile) elExcelFile.value = '';
       // Refresh data after import
       await loadCustomers();
     } catch (e) {
       console.error('Error importing file:', e);
-      alert('Failed to import file. Please try again.');
+      try { window.showToast && window.showToast('Failed to import file. Please try again.', { title: 'Import Failed', variant: 'danger' }); } catch(_){}
     }
   }
 
